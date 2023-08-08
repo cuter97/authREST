@@ -6,15 +6,15 @@ import { LoginUserDto } from './dto/login-user.dto';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+    constructor(private readonly authService: AuthService) { }
 
-  @Post('register')
-  async create(@Body() createUserDto: CreateUserDto) {
-    return this.authService.create(createUserDto);
-  }
+    @Post('register')
+    async create(@Body() createUserDto: CreateUserDto) {
+        return this.authService.create(createUserDto);
+    }
 
-  @Post('login')
-  async loginUser(@Body() loginUserDto: LoginUserDto) {
-    return this.authService.login(loginUserDto);
-  }
+    @Post('login')
+    async loginUser(@Body() loginUserDto: LoginUserDto) {
+        return this.authService.login(loginUserDto);
+    }
 }

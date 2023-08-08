@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, InternalServerErrorException, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { JwtService } from '@nestjs/jwt';
 import { Repository } from 'typeorm';
 
 import * as bcrypt from 'bcrypt';
@@ -8,56 +9,70 @@ import { User } from './entities/user.entity';
 
 import { CreateUserDto } from './dto/create-user.dto';
 import { LoginUserDto } from './dto/login-user.dto';
+import { JwtPayload } from './interfaces/jwt-payload.interface';
 
 @Injectable()
 export class AuthService {
 
-  constructor(
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
-  ) { }
+    constructor(
+        @InjectRepository(User)
+        private readonly userRepository: Repository<User>,
+        private readonly jwtService: JwtService,
+    ) { }
 
-  async create(createUserDto: CreateUserDto) {
-    try {
-      const { password, ...userData } = createUserDto;
+    async create(createUserDto: CreateUserDto) {
+        try {
+            const { password, ...userData } = createUserDto;
 
-      const user = this.userRepository.create({
-        ...userData,
-        password: bcrypt.hashSync(password, 10)
-      });
+            const user = this.userRepository.create({
+                ...userData,
+                password: bcrypt.hashSync(password, 10)
+            });
 
-      await this.userRepository.save(user);
-      delete user.password;
+            await this.userRepository.save(user);
+            delete user.password;
 
-      return user;
+            return {
+                ...user,
+                token: this.getJwtToken({ id: user.id })
+            };
 
-    } catch (error) {
-      this.handleDBErrors(error);
+        } catch (error) {
+            this.handleDBErrors(error);
+        }
     }
-  }
 
-  async login(loginUserDto: LoginUserDto) {
-    const { password, email } = loginUserDto;
+    async login(loginUserDto: LoginUserDto) {
+        const { password, email } = loginUserDto;
 
-    const user = await this.userRepository.findOne({
-      where: { email },
-      select: { email: true, password: true }
-    })
+        const user = await this.userRepository.findOne({
+            where: { email },
+            select: { email: true, password: true, id: true }
+        })
 
-    if (!user) 
-      throw new UnauthorizedException('Credentials are not valid');
-    
-    if (!bcrypt.compareSync(password, user.password)) 
-      throw new UnauthorizedException('Credentials are not valid');
+        if (!user)
+            throw new UnauthorizedException('Credentials are not valid');
 
-    return user;
-  }
+        if (!bcrypt.compareSync(password, user.password))
+            throw new UnauthorizedException('Credentials are not valid');
 
-  private handleDBErrors(error: any): never {
-    if (error.code === '23505') throw new BadRequestException(error.detail);
+        delete user.password;
 
-    console.log(error);
+        return {
+            ...user,
+            token: this.getJwtToken({ id: user.id })
+        };
+    }
 
-    throw new InternalServerErrorException('Check server logs');
-  }
+    private getJwtToken(payload: JwtPayload) {
+        return this.jwtService.sign(payload);
+    }
+
+    private handleDBErrors(error: any): never {
+        if (error.code === '23505') throw new BadRequestException(error.detail);
+
+        console.log(error);
+
+        throw new InternalServerErrorException('Check server logs');
+    }
 }
