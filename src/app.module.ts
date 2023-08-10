@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './auth/auth.module';
+import { MessagesWsModule } from './messages-ws/messages-ws.module';
 
 @Module({
   imports: [
@@ -19,6 +20,8 @@ import { AuthModule } from './auth/auth.module';
     }),
 
     AuthModule,
+
+    MessagesWsModule,
   ],
   controllers: [],
   providers: [],
